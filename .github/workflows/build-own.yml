@@ -1,5 +1,7 @@
 name: Build
 
+on: workflow_dispatch
+
 env:
 #  if: (github.event_name == 'schedule')
 #  GITHUB_ENV: https://docs.github.com/en/actions/learn-github-actions/environment-variables#about-environment-variables
