@@ -9,75 +9,131 @@ env:
   FF_VERSION: '8.0'
 
 jobs:
-  VS2022:
-    runs-on: windows-2022
+  # VS2022:
+  #   runs-on: windows-2022
+  #   env:
+  #     TARGET_OS: ${{ matrix.target }}
+  #     CONFIG_SUFFIX: -gpl-${{ matrix.config }}
+  #     NVENC: ${{ matrix.nvenc }}
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       config: [lite]
+  #       target: [windows-desktop]
+  #       nvenc: ["master"]
+  #   steps:
+  #   - uses: actions/checkout@v5
+  #     with:
+  #       submodules: 'recursive'
+  #   - name: Create Build Environment
+  #     shell: cmd
+  #     run: |
+  #       set FF_BRANCH=%FF_VERSION%
+  #       if not [%FF_BRANCH%]==[master] set FF_BRANCH=release/%FF_VERSION%
+  #       git clone -b %FF_BRANCH% --depth 1 --no-tags https://git.ffmpeg.org/ffmpeg.git ffmpeg-%FF_VERSION%
+  #       if not [%CONFIG_SUFFIX%]==[-default] copy /y config%CONFIG_SUFFIX%.sh config.sh
+  #   - uses: msys2/setup-msys2@v2
+  #     with:
+  #       release: false # disable installation cache, so exe path in avbuild.sh is correct
+  #       msystem: MSYS
+  #       update: true
+  #       install: >-
+  #         make
+  #         diffutils
+  #         patch
+  #         pkg-config
+  #         nasm
+  #         yasm
+  #   - name: Install dev packages
+  #     shell: msys2 {0}
+  #     run: |
+  #       wget https://sourceforge.net/projects/avbuild/files/dep/dep.7z/download -O dep.7z
+  #       wget https://sourceforge.net/projects/avbuild/files/dep/dep_gpl.7z/download -O dep_gpl.7z
+  #       sed -i '/X264_API_IMPORTS/d' "ffmpeg-${FF_VERSION}/libavcodec/libx264.c" # we link against static libx264
+  #   - name: 'Checkout nvenc'
+  #     if: ${{ matrix.nvenc != '' }}
+  #     run: |
+  #         cd tools/nv-codec-headers
+  #         git fetch -t
+  #         git checkout ${{ matrix.nvenc }}
+  #         git --no-pager log -1
+  #   - name: Configure and Build
+  #     shell: cmd
+  #     run: |
+  #       7z x -y dep.7z -otools
+  #       7z x -y dep_gpl.7z -otools
+  #       set PKG_CONFIG_PATH_MFX=%CD%\tools\dep\VS2022\lib\pkgconfig
+  #       set MSYS2_DIR=C:\msys64
+  #       set HOME=%CD%
+  #       set FFSRC=%CD%\ffmpeg-%FF_VERSION%
+  #       set BUILD_NOW=true
+  #       set USER_OPT=--enable-libshaderc
+  #       tools\vcbuild.bat VS2022 %TARGET_OS%10 x64
+  #   - name: Make SDK
+  #     shell: cmd
+  #     run: |
+  #       set SDK_NAME=ffmpeg-%FF_VERSION%-%TARGET_OS%-vs2022%CONFIG_SUFFIX%
+  #       move sdk* %SDK_NAME%
+  #       xcopy /s /f /y tools\dep_gpl\${{ env.TARGET_OS }}\lib\* %SDK_NAME%\lib\
+  #       7z a -ssc -m0=lzma2 -mx=9 -ms=on -mf=off %SDK_NAME%.7z %SDK_NAME%
+  #   - name: Archieve SDK
+  #     uses: actions/upload-artifact@v4
+  #     with:
+  #       name: ffmpeg-${{ env.FF_VERSION }}-${{ env.TARGET_OS }}-VS2022${{ matrix.config }}
+  #       path: ffmpeg-*.7z
+
+  Android:
+    runs-on: macos-latest
     env:
-      TARGET_OS: ${{ matrix.target }}
+      TARGET_OS: android
       CONFIG_SUFFIX: -gpl-${{ matrix.config }}
-      NVENC: ${{ matrix.nvenc }}
+      ANDROID_NDK_VERSION: 26.1.10909125
+      ANDROID_NDK_ROOT: /usr/local/lib/android/sdk/ndk/26.1.10909125
     strategy:
       fail-fast: false
       matrix:
         config: [lite]
-        target: [windows-desktop]
-        nvenc: ["master"]
     steps:
     - uses: actions/checkout@v5
+    - name: 'Restore sysroot cache'
+      id: sysroot-cache
+      uses: actions/cache@v4
       with:
-        submodules: 'recursive'
+        path: /tmp/sysroot
+        key: sysroot-${{ env.TARGET_OS }}-${{ vars.LINUX_SYSROOT_ID }}
+    - name: Setup Android NDK
+      id: setup-ndk
+      uses: nttld/setup-ndk@v1
+      with:
+        ndk-version: r26b
+        add-to-path: true
+        link-to-sdk: true
     - name: Create Build Environment
-      shell: cmd
+      shell: bash
+      env:
+        DEVTOOLS_CACHE_HIT: ${{ steps.devtools-cache.outputs.cache-hit }}
+        SYSROOT_CACHE_HIT: ${{ steps.sysroot-cache.outputs.cache-hit }}
+        EXTERNAL_DEP_CACHE_HIT: ${{ steps.external-dep-cache.outputs.cache-hit }}
       run: |
-        set FF_BRANCH=%FF_VERSION%
-        if not [%FF_BRANCH%]==[master] set FF_BRANCH=release/%FF_VERSION%
-        git clone -b %FF_BRANCH% --depth 1 --no-tags https://git.ffmpeg.org/ffmpeg.git ffmpeg-%FF_VERSION%
-        if not [%CONFIG_SUFFIX%]==[-default] copy /y config%CONFIG_SUFFIX%.sh config.sh
-    - uses: msys2/setup-msys2@v2
-      with:
-        release: false # disable installation cache, so exe path in avbuild.sh is correct
-        msystem: MSYS
-        update: true
-        install: >-
-          make
-          diffutils
-          patch
-          pkg-config
-          nasm
-          yasm
-    - name: Install dev packages
-      shell: msys2 {0}
-      run: |
-        wget https://sourceforge.net/projects/avbuild/files/dep/dep.7z/download -O dep.7z
+        ./tools/ci-before-build.sh
         wget https://sourceforge.net/projects/avbuild/files/dep/dep_gpl.7z/download -O dep_gpl.7z
-        sed -i '/X264_API_IMPORTS/d' "ffmpeg-${FF_VERSION}/libavcodec/libx264.c" # we link against static libx264
-    - name: 'Checkout nvenc'
-      if: ${{ matrix.nvenc != '' }}
-      run: |
-          cd tools/nv-codec-headers
-          git fetch -t
-          git checkout ${{ matrix.nvenc }}
-          git --no-pager log -1
-    - name: Configure and Build
-      shell: cmd
-      run: |
-        7z x -y dep.7z -otools
         7z x -y dep_gpl.7z -otools
-        set PKG_CONFIG_PATH_MFX=%CD%\tools\dep\VS2022\lib\pkgconfig
-        set MSYS2_DIR=C:\msys64
-        set HOME=%CD%
-        set FFSRC=%CD%\ffmpeg-%FF_VERSION%
-        set BUILD_NOW=true
-        set USER_OPT=--enable-libshaderc
-        tools\vcbuild.bat VS2022 %TARGET_OS%10 x64
-    - name: Make SDK
-      shell: cmd
+    - name: Configure and Build
+      shell: bash
+      env:
+        ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        ANDROID_NDK: ${{ steps.setup-ndk.outputs.ndk-path }}
       run: |
-        set SDK_NAME=ffmpeg-%FF_VERSION%-%TARGET_OS%-vs2022%CONFIG_SUFFIX%
-        move sdk* %SDK_NAME%
-        xcopy /s /f /y tools\dep_gpl\${{ env.TARGET_OS }}\lib\* %SDK_NAME%\lib\
-        7z a -ssc -m0=lzma2 -mx=9 -ms=on -mf=off %SDK_NAME%.7z %SDK_NAME%
+        # export ANDROID_NDK=${{ env.ANDROID_NDK_ROOT }}
+        export FFSRC=$PWD/ffmpeg-${FF_VERSION}
+        ./avbuild.sh ${TARGET_OS}25 arm64
+    - name: Make SDK
+      shell: bash
+      run: |
+        cp -avf tools/dep_gpl/${{ env.TARGET_OS }}_arm64/lib/* sdk-*/lib/
+        ./tools/ci-after-build.sh
     - name: Archieve SDK
       uses: actions/upload-artifact@v4
       with:
-        name: ffmpeg-${{ env.FF_VERSION }}-${{ env.TARGET_OS }}-VS2022${{ matrix.config }}
-        path: ffmpeg-*.7z
+        name: ffmpeg-${{ env.FF_VERSION }}-${{ env.TARGET_OS }}-${{ matrix.config }}
+        path: ffmpeg-*.tar.xz
