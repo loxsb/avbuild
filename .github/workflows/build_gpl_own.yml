@@ -86,7 +86,7 @@ jobs:
     runs-on: macos-latest
     env:
       TARGET_OS: android
-      CONFIG_SUFFIX: -gpl-${{ matrix.config }}
+      CONFIG_SUFFIX: -${{ matrix.config }}
     strategy:
       fail-fast: false
       matrix:
@@ -109,13 +109,8 @@ jobs:
     - name: Create Build Environment
       shell: bash
       env:
-        DEVTOOLS_CACHE_HIT: ${{ steps.devtools-cache.outputs.cache-hit }}
         SYSROOT_CACHE_HIT: ${{ steps.sysroot-cache.outputs.cache-hit }}
-        EXTERNAL_DEP_CACHE_HIT: ${{ steps.external-dep-cache.outputs.cache-hit }}
-      run: |
-        ./tools/ci-before-build.sh
-        wget https://sourceforge.net/projects/avbuild/files/dep/dep_gpl.7z/download -O dep_gpl.7z
-        7z x -y dep_gpl.7z -otools
+      run: ./tools/ci-before-build.sh
     - name: Configure and Build 32bit
       shell: bash
       run: |
