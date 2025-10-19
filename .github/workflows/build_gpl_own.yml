@@ -123,7 +123,7 @@ jobs:
         ANDROID_NDK: ${{ steps.setup-ndk.outputs.ndk-path }}
       run: |
         export FFSRC=$PWD/ffmpeg-${FF_VERSION}
-        ./avbuild.sh ${TARGET_OS}25 arm64
+        ./avbuild.sh ${TARGET_OS}25 "armv7 arm64"
     - name: Make SDK
       shell: bash
       run: |
