@@ -6,10 +6,7 @@ env:
 #  if: (github.event_name == 'schedule')
 #  GITHUB_ENV: https://docs.github.com/en/actions/learn-github-actions/environment-variables#about-environment-variables
   # FF_VERSION: ${{ vars.FF_VER }} # TODO: latest release if triggered by schedule
-  FF_VERSION: 8.0
-  NINJA_STATUS: '[%f/%t %e %r]'
-  SF_PW_MAPPED: ${{ secrets.SF_PW }}
-  SF_USER_MAPPED: ${{ secrets.SF_USER }}
+  FF_VERSION: '8.0'
 
 jobs:
   VS2022:
