@@ -116,19 +116,24 @@ jobs:
         ./tools/ci-before-build.sh
         wget https://sourceforge.net/projects/avbuild/files/dep/dep_gpl.7z/download -O dep_gpl.7z
         7z x -y dep_gpl.7z -otools
-    - name: Configure and Build
+    - name: Configure and Build 32bit
       shell: bash
-      env:
-        ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
-        ANDROID_NDK: ${{ steps.setup-ndk.outputs.ndk-path }}
       run: |
         export FFSRC=$PWD/ffmpeg-${FF_VERSION}
-        ./avbuild.sh ${TARGET_OS}25 "armv7 arm64"
-    - name: Make SDK
+        export USER_OPT="--enable-wolfssl"
+        ./avbuild.sh ${TARGET_OS} "armv7 x86"
+        mv sdk-android-clang{,32}
+    - name: Configure and Build 64bit
       shell: bash
       run: |
-        cp -avf tools/dep_gpl/${{ env.TARGET_OS }}_arm64/lib/* sdk-*/lib/
-        ./tools/ci-after-build.sh
+        export FFSRC=$PWD/ffmpeg-${FF_VERSION}
+        export USER_OPT="--enable-wolfssl"
+        ./avbuild.sh ${TARGET_OS} "arm64 x86_64"
+        rsync -auv --ignore-existing  sdk-android-clang{32/*,}
+        rm -rf sdk-android-clang32
+    - name: Make SDK
+      shell: bash
+      run: ./tools/ci-after-build.sh
     - name: Archieve SDK
       uses: actions/upload-artifact@v4
       with:
