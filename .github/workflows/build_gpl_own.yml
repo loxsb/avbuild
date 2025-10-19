@@ -87,8 +87,6 @@ jobs:
     env:
       TARGET_OS: android
       CONFIG_SUFFIX: -gpl-${{ matrix.config }}
-      ANDROID_NDK_VERSION: 26.1.10909125
-      ANDROID_NDK_ROOT: /usr/local/lib/android/sdk/ndk/26.1.10909125
     strategy:
       fail-fast: false
       matrix:
@@ -124,7 +122,6 @@ jobs:
         ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         ANDROID_NDK: ${{ steps.setup-ndk.outputs.ndk-path }}
       run: |
-        # export ANDROID_NDK=${{ env.ANDROID_NDK_ROOT }}
         export FFSRC=$PWD/ffmpeg-${FF_VERSION}
         ./avbuild.sh ${TARGET_OS}25 arm64
     - name: Make SDK
